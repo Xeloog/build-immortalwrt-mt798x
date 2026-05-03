@@ -69,7 +69,16 @@ jobs:
 
     - name: Compile firmware (single thread)
       working-directory: ./openwrt
-      run: make -j1 V=s
+      run: |
+        make -j1 V=s 2>&1 | tee build.log
+
+    - name: Upload build log
+      uses: actions/upload-artifact@v4
+      if: always()   # 无论成功或失败都上传日志
+      with:
+        name: openwrt-build-log
+        path: openwrt/build.log
+        retention-days: 7
 
     - name: Upload firmware
       uses: actions/upload-artifact@v4

@@ -37,7 +37,6 @@ jobs:
           build-essential clang flex g++ gawk gcc-multilib gettext git \
           libncurses5-dev libssl-dev python3 python3-dev rsync unzip \
           zlib1g-dev file wget time
-        # uglify-js installed via npm
         sudo apt install -y npm
         sudo npm install -g uglify-js
         sudo apt clean
@@ -57,7 +56,6 @@ jobs:
         cd openwrt
         echo "CONFIG_DEVEL=y" >> .config
         echo "CONFIG_CCACHE=y" >> .config
-        # 显式添加 W25N01KV 支持和 108M 大分区布局
         echo "CONFIG_MTD_SPI_NAND_W25N01KV=y" >> .config
         echo "CONFIG_TARGET_LAYOUT_108M=y" >> .config
 
@@ -69,16 +67,19 @@ jobs:
 
     - name: Compile firmware (single thread)
       working-directory: ./openwrt
+      id: compile
       run: |
         make -j1 V=s 2>&1 | tee build.log
+        echo "status=$?" >> $GITHUB_OUTPUT
 
-    - name: Upload build log
-      uses: actions/upload-artifact@v4
-      if: always()   # 无论成功或失败都上传日志
-      with:
-        name: openwrt-build-log
-        path: openwrt/build.log
-        retention-days: 7
+    - name: Show error tail if failed
+      if: steps.compile.outputs.status != 0
+      working-directory: ./openwrt
+      run: |
+        echo "==================== Last 100 lines of build.log ===================="
+        tail -n 100 build.log
+        echo "====================================================================="
+        exit 1
 
     - name: Upload firmware
       uses: actions/upload-artifact@v4
